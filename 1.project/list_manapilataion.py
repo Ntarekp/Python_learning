@@ -11,7 +11,10 @@ print(list)
 
 
 
-
+print(list[-20:-14])
+# Find the length of the list
+list_length = len(list)
+print(list_length)
 
 
 
