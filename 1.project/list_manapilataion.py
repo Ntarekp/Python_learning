@@ -65,10 +65,13 @@ def multiply(*nums):
         result *= num
     return result
 
+
 print(multiply(2, 5, 4))
+
 
 def studentfn(**students):
     return students
+
 
 students = studentfn(student1="Prince", student2="Alice", student3="Bob")
 print(students)
