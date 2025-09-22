@@ -75,3 +75,9 @@ def studentfn(**students):
 
 students = studentfn(student1="Prince", student2="Alice", student3="Bob")
 print(students)
+
+def get_fruits(fruit1, fruit2, fruit3):
+       print("The sweatest fruit is " + fruit3)
+
+get_fruits(fruit1="apple", fruit2="banana", fruit3="mangao")
+    
