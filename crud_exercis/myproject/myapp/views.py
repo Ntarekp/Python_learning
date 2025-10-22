@@ -1,70 +1,84 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Class, Student, Attendance
-from .forms import StudentForm, AttendanceForm, ClassForm
+from .models import Student, Attendance
 from django.utils import timezone
 
-class AttendanceListView(ListView):
-    model = Attendance
-    template_name = 'myapp/attendance_list.html'
-    context_object_name = 'attendances'
-    ordering = ['-date']
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['today'] = timezone.now().date()
-        return context
+def attendance_list(request):
+    """Show all attendance records (simple list)."""
+    attendances = Attendance.objects.all().order_by('-date')
+    return render(request, 'myapp/attendance_list.html', {
+        'attendances': attendances,
+        'today': timezone.now().date()
+    })
 
-class AttendanceCreateView(CreateView):
-    model = Attendance
-    template_name = 'myapp/attendance_form.html'
-    form_class = AttendanceForm
-    success_url = reverse_lazy('attendance_list')
 
-    def form_valid(self, form):
-        messages.success(self.request, 'Attendance record created successfully.')
-        return super().form_valid(form)
+def mark_attendance(request):
+    """Display students with checkboxes and save attendance for selected date (today by default)."""
+    today = timezone.now().date()
 
-class AttendanceUpdateView(UpdateView):
-    model = Attendance
-    template_name = 'myapp/attendance_form.html'
-    form_class = AttendanceForm
-    success_url = reverse_lazy('attendance_list')
+    if request.method == 'POST':
+        present_students = request.POST.getlist('present_students')
+        date = request.POST.get('date') or str(today)
 
-    def form_valid(self, form):
-        messages.success(self.request, 'Attendance record updated successfully.')
-        return super().form_valid(form)
+        # Remove existing records for that date
+        Attendance.objects.filter(date=date).delete()
 
-class AttendanceDeleteView(DeleteView):
-    model = Attendance
-    template_name = 'myapp/attendance_confirm_delete.html'
-    success_url = reverse_lazy('attendance_list')
+        # Create attendance records: present for selected, absent for others
+        all_students = Student.objects.all()
+        for student in all_students:
+            Attendance.objects.create(
+                student=student,
+                date=date,
+                is_present=(str(student.id) in present_students)
+            )
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Attendance record deleted successfully.')
-        return super().delete(request, *args, **kwargs)
+        messages.success(request, 'Attendance saved.')
+        return redirect('attendance_list')
 
-# Student Views
-class StudentListView(ListView):
-    model = Student
-    template_name = 'myapp/student_list.html'
-    context_object_name = 'students'
+    students = Student.objects.all().order_by('name')
+    return render(request, 'myapp/mark_attendance.html', {
+        'students': students,
+        'today': today
+    })
 
-class StudentCreateView(CreateView):
-    model = Student
-    template_name = 'myapp/student_form.html'
-    form_class = StudentForm
-    success_url = reverse_lazy('student_list')
 
-class StudentUpdateView(UpdateView):
-    model = Student
-    template_name = 'myapp/student_form.html'
-    form_class = StudentForm
-    success_url = reverse_lazy('student_list')
+def add_student(request):
+    """Show simple add-student page and handle POST to create a student."""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        student_id = request.POST.get('student_id')
+        if name and student_id:
+            Student.objects.create(name=name, student_id=student_id)
+            messages.success(request, 'Student added.')
+            return redirect('mark_attendance')
+        else:
+            messages.error(request, 'Please provide both name and student id.')
 
-class StudentDeleteView(DeleteView):
-    model = Student
-    template_name = 'myapp/student_confirm_delete.html'
-    success_url = reverse_lazy('student_list')
+    return render(request, 'myapp/add_student.html')
+
+def edit_student(request, student_id):
+    """Edit an existing student."""
+    student = get_object_or_404(Student, id=student_id)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        student_id_new = request.POST.get('student_id')
+        
+        if name and student_id_new:
+            student.name = name
+            student.student_id = student_id_new
+            student.save()
+            messages.success(request, 'Student updated.')
+            return redirect('mark_attendance')
+        else:
+            messages.error(request, 'Please provide both name and student id.')
+    
+    return render(request, 'myapp/edit_student.html', {'student': student})
+
+def delete_student(request, student_id):
+    """Delete a student."""
+    student = get_object_or_404(Student, id=student_id)
+    student.delete()
+    messages.success(request, 'Student deleted.')
+    return redirect('mark_attendance')

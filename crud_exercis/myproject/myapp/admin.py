@@ -1,10 +1,6 @@
 from django.contrib import admin
-from .models import Class, Student, Attendance
+from .models import Student, Attendance
 
-@admin.register(Class)
-class ClassAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_date')
-    search_fields = ('name',)
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
@@ -13,8 +9,8 @@ class StudentAdmin(admin.ModelAdmin):
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
-    list_display = ('student', 'class_instance', 'date', 'status')
-    list_filter = ('status', 'date', 'class_instance')
+    list_display = ('student', 'date', 'is_present')
+    list_filter = ('date', 'is_present')
     search_fields = ('student__name', 'class_instance__name')
     date_hierarchy = 'date'
     list_per_page = 20
